@@ -22,6 +22,11 @@ def configure(ctx):
     """
     ctx.load('pebble_sdk')
 
+    try:
+        ctx.load('clang_compilation_database')
+    except Exception as e:
+        raise RuntimeError("Follow instructions here: https://github.com/coredevices/pebble-tool/issues/6#issuecomment-3134744369") from e
+
 
 def build(ctx):
     ctx.load('pebble_sdk')
