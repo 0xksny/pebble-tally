@@ -7,6 +7,8 @@
 #define MIN_COUNT 0
 #define MAX_COUNT 9999
 
+#define TEXT_LAYER_Y_OFFSET 4
+
 typedef struct {
   Layer *card_layer;
   Layer *top_clip_layer;
@@ -44,9 +46,14 @@ static void prv_format_count(int count, char output[DIGIT_COUNT + 1]) {
   snprintf(output, DIGIT_COUNT + 1, "%04d", count);
 }
 
+static void prv_clip_layer_update(Layer *layer, GContext *ctx) {
+  graphics_context_set_fill_color(ctx, prv_card_color());
+  graphics_fill_rect(ctx, layer_get_bounds(layer), 0, GCornerNone);
+}
+
 static TextLayer *prv_create_digit_text_layer(GRect frame) {
   TextLayer *text_layer = text_layer_create(frame);
-  text_layer_set_background_color(text_layer, prv_card_color());
+  text_layer_set_background_color(text_layer, GColorClear);
   text_layer_set_text_color(text_layer, GColorWhite);
   text_layer_set_text_alignment(text_layer, GTextAlignmentCenter);
   text_layer_set_font(text_layer, s_digit_font);
@@ -80,13 +87,16 @@ static void prv_create_card(DigitCard *card, Layer *parent, GRect frame) {
   layer_set_clips(card->top_clip_layer, true);
   layer_set_clips(card->bottom_clip_layer, true);
   layer_set_clips(card->flap_clip_layer, true);
+  layer_set_update_proc(card->top_clip_layer, prv_clip_layer_update);
+  layer_set_update_proc(card->bottom_clip_layer, prv_clip_layer_update);
+  layer_set_update_proc(card->flap_clip_layer, prv_clip_layer_update);
 
   card->old_top_text =
-      prv_create_digit_text_layer(GRect(0, -1, card->width, card->height));
+      prv_create_digit_text_layer(GRect(0, TEXT_LAYER_Y_OFFSET, card->width, card->height));
   card->new_bottom_text = prv_create_digit_text_layer(
-      GRect(0, -half_height - 1, card->width, card->height));
+      GRect(0, -half_height + TEXT_LAYER_Y_OFFSET, card->width, card->height));
   card->flap_text = prv_create_digit_text_layer(
-      GRect(0, -half_height - 1, card->width, card->height));
+      GRect(0, -half_height + TEXT_LAYER_Y_OFFSET, card->width, card->height));
 
   layer_add_child(card->top_clip_layer,
                   text_layer_get_layer(card->old_top_text));
@@ -135,7 +145,7 @@ static void prv_set_card_progress(DigitCard *card, uint16_t progress) {
     layer_set_frame(card->flap_clip_layer,
                     GRect(0, half_height, card->width, flap_height));
     layer_set_frame(text_layer_get_layer(card->flap_text),
-                    GRect(0, -half_height - 1, card->width, card->height));
+                    GRect(0, -half_height + TEXT_LAYER_Y_OFFSET, card->width, card->height));
     card->flap_character[0] = card->old_character[0];
   } else {
     const int16_t flap_height = half_height * (progress - 500) / 500;
@@ -143,7 +153,7 @@ static void prv_set_card_progress(DigitCard *card, uint16_t progress) {
     layer_set_frame(card->flap_clip_layer,
                     GRect(0, flap_y, card->width, flap_height));
     layer_set_frame(text_layer_get_layer(card->flap_text),
-                    GRect(0, -flap_y - 1, card->width, card->height));
+                    GRect(0, -flap_y + TEXT_LAYER_Y_OFFSET, card->width, card->height));
     card->flap_character[0] = card->new_character[0];
   }
   text_layer_set_text(card->flap_text, card->flap_character);
